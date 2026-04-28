@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 import cpu_pkg::*;
 
-module tb_alu_island;
+module alu_island_tb;
 
     logic [3:0]  alu_op;
     logic [31:0] opa, opb;
