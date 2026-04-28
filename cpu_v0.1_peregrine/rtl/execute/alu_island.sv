@@ -1,4 +1,7 @@
 // alu_island.sv
+//
+`timescale 1ns / 1ps
+
 module alu_island (
     input  logic [3:0]  alu_op_i,
     input  logic [31:0] opa_i,

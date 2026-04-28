@@ -1,0 +1,5 @@
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "/home/h-zn/Modena/cpu_v0.1_peregrine/rtl/include/cpu_pkg.sv" into library work
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "/home/h-zn/Modena/cpu_v0.1_peregrine/rtl/execute/alu_island.sv" into library work
+INFO: [VRFC 10-311] analyzing module alu_island
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "/home/h-zn/Modena/cpu_v0.1_peregrine/testbench/module_tb/execute/alu_island_tb.sv" into library work
+INFO: [VRFC 10-311] analyzing module alu_island_tb
