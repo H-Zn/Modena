@@ -57,7 +57,7 @@ module dcache #(
         D_WRITE_ALLOCATE
     } dcache_state_t;
 
-    dcache_state_t state, next_state;
+    dcache_state_t state;
 
     typedef struct packed {
         logic [TAG_BITS-1:0] tag;
@@ -81,7 +81,6 @@ module dcache #(
 
     logic hit;
     logic [1:0] hit_way;
-    logic [$clog2(WORDS_PER_LINE)-1:0] hit_word;
 
     always_comb begin
         hit      = 1'b0;
@@ -94,36 +93,31 @@ module dcache #(
         end
     end
 
-    assign hit_word  = req_word;
     assign rsp_rdata_o = (state == D_LOOKUP && hit) ?
-                         data_ram[req_idx][hit_way][hit_word] : 32'h0;
+                         data_ram[req_idx][hit_way][req_word] : 32'h0;
     assign rsp_valid_o = (state == D_LOOKUP) && hit;
     assign rsp_miss_o  = (state == D_LOOKUP) && !hit && req_valid_i;
 
     logic [1:0] victim_way;
-    assign victim_way = plru[req_idx][1] ?
-                        (plru[req_idx][0] ? 2'b11 : 2'b10) :
-                        (plru[req_idx][0] ? 2'b01 : 2'b00);
+    assign victim_way = plru[req_idx][0] ? 2'd1 : 2'd0;
 
-    logic [$clog2(DEPTH)-1:0] fill_ptr;
-    logic [$clog2(DEPTH)-1:0] wb_ptr;
     logic [$clog2(WORDS_PER_LINE)-1:0] wb_word_cnt;
 
-    typedef struct packed {
-        logic valid;
-        logic [$clog2(NUM_SETS)-1:0] idx;
-        logic [TAG_BITS-1:0] tag;
-        logic [1:0] way;
-        logic [31:0] data [0:WORDS_PER_LINE-1];
-        logic dirty;
-    } pending_fill_t;
-
-    pending_fill_t pending_fill;
+    logic        pending_valid;
+    logic [INDEX_BITS-1:0] pending_idx;
+    logic [TAG_BITS-1:0] pending_tag;
+    logic [1:0] pending_way;
+    logic [31:0] pending_data [0:WORDS_PER_LINE-1];
+    logic        pending_dirty;
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             state <= D_IDLE;
-            pending_fill <= '0;
+            pending_valid <= 1'b0;
+            pending_idx <= '0;
+            pending_tag <= '0;
+            pending_way <= '0;
+            pending_dirty <= 1'b0;
             wb_word_cnt <= '0;
             for (int s = 0; s < NUM_SETS; s++) begin
                 plru[s] <= 2'b00;
@@ -145,10 +139,9 @@ module dcache #(
                 D_LOOKUP: begin
                     if (hit) begin
                         if (req_type_i == MEM_REQ_STORE) begin
-                            data_ram[req_idx][hit_way][hit_word] <= req_wdata_i;
                             for (int b = 0; b < 4; b++) begin
                                 if (req_wmask_i[b])
-                                    data_ram[req_idx][hit_way][hit_word][b*8 +: 8] <= req_wdata_i[b*8 +: 8];
+                                    data_ram[req_idx][hit_way][req_word][b*8 +: 8] <= req_wdata_i[b*8 +: 8];
                             end
                             tag_ram[req_idx][hit_way].dirty <= 1'b1;
                         end
@@ -160,13 +153,13 @@ module dcache #(
                         end else begin
                             if (mshr_alloc_ready_i) begin
                                 state <= D_REFILL;
-                                pending_fill.valid <= 1'b1;
-                                pending_fill.idx   <= req_idx;
-                                pending_fill.tag   <= req_tag;
-                                pending_fill.way   <= victim_way;
-                                pending_fill.dirty <= (req_type_i == MEM_REQ_STORE);
+                                pending_valid <= 1'b1;
+                                pending_idx   <= req_idx;
+                                pending_tag   <= req_tag;
+                                pending_way   <= victim_way;
+                                pending_dirty <= (req_type_i == MEM_REQ_STORE);
                                 for (int ww = 0; ww < WORDS_PER_LINE; ww++)
-                                    pending_fill.data[ww] <= 32'h0;
+                                    pending_data[ww] <= 32'h0;
                             end
                         end
                     end
@@ -179,11 +172,11 @@ module dcache #(
                             tag_ram[req_idx][victim_way].dirty <= 1'b0;
                             if (mshr_alloc_ready_i) begin
                                 state <= D_REFILL;
-                                pending_fill.valid <= 1'b1;
-                                pending_fill.idx   <= req_idx;
-                                pending_fill.tag   <= req_tag;
-                                pending_fill.way   <= victim_way;
-                                pending_fill.dirty <= (req_type_i == MEM_REQ_STORE);
+                                pending_valid <= 1'b1;
+                                pending_idx   <= req_idx;
+                                pending_tag   <= req_tag;
+                                pending_way   <= victim_way;
+                                pending_dirty <= (req_type_i == MEM_REQ_STORE);
                             end else begin
                                 state <= D_IDLE;
                             end
@@ -195,17 +188,17 @@ module dcache #(
                     if (mshr_fill_valid_i) begin
                         for (int ww = 0; ww < WORDS_PER_LINE; ww++) begin
                             if (mshr_fill_addr_i[OFFSET_BITS-1:2] == ww[$clog2(WORDS_PER_LINE)-1:0])
-                                pending_fill.data[ww] <= mshr_fill_data_i;
+                                pending_data[ww] <= mshr_fill_data_i;
                         end
                         if (mshr_fill_last_i) begin
-                            tag_ram[pending_fill.idx][pending_fill.way].tag   <= pending_fill.tag;
-                            tag_ram[pending_fill.idx][pending_fill.way].valid <= 1'b1;
-                            tag_ram[pending_fill.idx][pending_fill.way].dirty <= pending_fill.dirty;
+                            tag_ram[pending_idx][pending_way].tag   <= pending_tag;
+                            tag_ram[pending_idx][pending_way].valid <= 1'b1;
+                            tag_ram[pending_idx][pending_way].dirty <= pending_dirty;
                             for (int ww = 0; ww < WORDS_PER_LINE; ww++)
-                                data_ram[pending_fill.idx][pending_fill.way][ww] <= pending_fill.data[ww];
+                                data_ram[pending_idx][pending_way][ww] <= pending_data[ww];
 
-                            plru[pending_fill.idx] <= ~pending_fill.way;
-                            pending_fill.valid <= 1'b0;
+                            plru[pending_idx] <= ~pending_way;
+                            pending_valid <= 1'b0;
                             state <= D_LOOKUP;
                         end
                     end
