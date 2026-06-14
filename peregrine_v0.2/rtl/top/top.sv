@@ -114,6 +114,11 @@ module peregrine_top #(
     logic        ex2_is_mul_div;
     logic [ 2:0] ex2_mul_div_op;
 
+    // EX2 results
+    logic [31:0] ex2_result;
+    logic [31:0] alu_result, mul_div_result;
+    logic        mul_div_busy, mul_div_valid;
+
     // EX2/EX3
     logic [31:0] ex3_result;
     logic [31:0] ex3_store_data;
@@ -136,6 +141,26 @@ module peregrine_top #(
     logic flush_if, flush_id, flush_ex1, flush_ex2;
     logic pc_redirect_valid;
     logic [31:0] pc_redirect_target;
+
+    // SRB signals
+    logic        srb_alloc_en, srb_alloc_full;
+    logic [ 4:0] srb_alloc_idx;
+    logic        srb_result_wr_en;
+    logic [ 4:0] srb_result_idx;
+    logic [31:0] srb_result_data;
+    logic        srb_result_exception;
+    exc_code_t   srb_result_exc_code;
+    logic        srb_commit_valid;
+    logic [ 4:0] srb_commit_rd_addr;
+    logic [31:0] srb_commit_rd_data;
+    logic        srb_commit_rd_wen;
+    logic        srb_store_commit;
+    logic [ 2:0] srb_store_commit_idx;
+    logic        srb_exc_req;
+    logic [31:0] srb_exc_pc;
+    exc_code_t   srb_exc_code;
+    logic        srb_stall_wb;
+    logic        srb_instret_event;
 
     logic dep_stall, maq_full_stall, eiq_full_stall, srb_stall;
     logic icache_miss_stall, dcache_miss_stall;
@@ -174,7 +199,7 @@ module peregrine_top #(
         .rst_n        (rst_n),
         .pc_query     (pc),
         .pred_dir     (pred_dir),
-        .conf         (pred_conf),
+        .pred_conf    (pred_conf),
         .update_valid (update_pred_valid),
         .update_pc    (update_pred_pc),
         .update_taken (update_pred_taken)
@@ -407,10 +432,6 @@ module peregrine_top #(
 
     // Register File
     logic [31:0] rf_rs1_data, rf_rs2_data;
-    logic        srb_commit_valid;
-    logic [ 4:0] srb_commit_rd_addr;
-    logic [31:0] srb_commit_rd_data;
-    logic        srb_commit_rd_wen;
 
     regfile regfile_inst (
         .clk       (clk),
@@ -525,8 +546,6 @@ module peregrine_top #(
     // ============================================================
     // EX2: Execution Islands
     // ============================================================
-    logic [31:0] alu_result, mul_div_result;
-    logic        mul_div_busy, mul_div_valid;
 
     alu_island alu_inst (
         .alu_op_i (ex2_alu_op),
@@ -571,7 +590,6 @@ module peregrine_top #(
         .mispredict_o   (bru_mispred)
     );
 
-    logic [31:0] ex2_result;
     assign ex2_result = ex2_is_mul_div ? mul_div_result : alu_result;
 
     // EX2/EX3 Pipeline Register
@@ -780,24 +798,6 @@ module peregrine_top #(
     // ============================================================
     // Commit: SRB
     // ============================================================
-    logic        srb_alloc_en, srb_alloc_full;
-    logic [ 4:0] srb_alloc_idx;
-    logic        srb_result_wr_en;
-    logic [ 4:0] srb_result_idx;
-    logic [31:0] srb_result_data;
-    logic        srb_result_exception;
-    exc_code_t   srb_result_exc_code;
-    logic [ 4:0] srb_commit_rd_addr_w;
-    logic [31:0] srb_commit_rd_data_w;
-    logic        srb_commit_rd_wen_w;
-    logic        srb_store_commit;
-    logic [ 2:0] srb_store_commit_idx;
-    logic        srb_exc_req;
-    logic [31:0] srb_exc_pc;
-    exc_code_t   srb_exc_code;
-    logic        srb_stall_wb;
-    logic        srb_instret_event;
-
     assign srb_alloc_en     = !stall_ex1 && !flush_ex1 && (ex1_micro_op.rd_wen || ex1_micro_op.mem_write);
     assign srb_alloc_rd_addr = ex1_micro_op.rd_addr;
     assign srb_alloc_rd_wen  = ex1_micro_op.rd_wen;
