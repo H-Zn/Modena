@@ -41,23 +41,20 @@ module mshr #(
         mshr_state_t       state;
         logic [31:0]       line_addr;
         logic              is_write;
-        logic [$clog2(NUM_ENTRIES)-1:0] id;
     } mshr_entry_t;
 
     mshr_entry_t entries [0:NUM_ENTRIES-1];
-    logic [$clog2(NUM_ENTRIES)-1:0] alloc_ptr;
-    logic [$clog2(NUM_ENTRIES)-1:0] serve_ptr;
 
     logic any_free;
-    logic [$clog2(NUM_ENTRIES)-1:0] free_idx;
+    logic [1:0] free_idx;
 
     always_comb begin
         any_free = 1'b0;
-        free_idx = '0;
+        free_idx = 2'd0;
         for (int i = 0; i < NUM_ENTRIES; i++) begin
             if (!entries[i].valid && !any_free) begin
                 any_free = 1'b1;
-                free_idx = i[$clog2(NUM_ENTRIES)-1:0];
+                free_idx = i[1:0];
             end
         end
     end
@@ -66,33 +63,33 @@ module mshr #(
     assign alloc_id_o    = free_idx;
 
     logic serve_valid;
-    logic [$clog2(NUM_ENTRIES)-1:0] serve_idx;
+    logic [1:0] serve_idx;
 
     always_comb begin
         serve_valid = 1'b0;
-        serve_idx   = '0;
+        serve_idx   = 2'd0;
         for (int i = 0; i < NUM_ENTRIES; i++) begin
             if (entries[i].valid && entries[i].state == M_PENDING && !serve_valid) begin
                 serve_valid = 1'b1;
-                serve_idx   = i[$clog2(NUM_ENTRIES)-1:0];
+                serve_idx   = i[1:0];
             end
         end
     end
 
-    assign fill_req_valid_o   = serve_valid;
-    assign fill_req_addr_o    = entries[serve_idx].line_addr;
+    assign fill_req_valid_o    = serve_valid;
+    assign fill_req_addr_o     = entries[serve_idx].line_addr;
     assign fill_req_is_write_o = entries[serve_idx].is_write;
 
     logic fill_done_valid;
-    logic [$clog2(NUM_ENTRIES)-1:0] fill_done_idx;
+    logic [1:0] fill_done_idx;
 
     always_comb begin
         fill_done_valid = 1'b0;
-        fill_done_idx   = '0;
+        fill_done_idx   = 2'd0;
         for (int i = 0; i < NUM_ENTRIES; i++) begin
             if (entries[i].valid && entries[i].state == M_FILLING && !fill_done_valid) begin
                 fill_done_valid = 1'b1;
-                fill_done_idx   = i[$clog2(NUM_ENTRIES)-1:0];
+                fill_done_idx   = i[1:0];
             end
         end
     end
@@ -105,8 +102,6 @@ module mshr #(
             for (int i = 0; i < NUM_ENTRIES; i++) begin
                 entries[i] <= '0;
             end
-            alloc_ptr <= '0;
-            serve_ptr <= '0;
         end else if (flush_i) begin
             for (int i = 0; i < NUM_ENTRIES; i++) begin
                 entries[i].valid <= 1'b0;
@@ -118,7 +113,6 @@ module mshr #(
                 entries[free_idx].state     <= M_PENDING;
                 entries[free_idx].line_addr <= alloc_addr_i;
                 entries[free_idx].is_write  <= alloc_is_write_i;
-                entries[free_idx].id        <= free_idx;
             end
 
             if (fill_req_valid_o && fill_req_ready_i) begin

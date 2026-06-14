@@ -69,17 +69,17 @@ module exception_handler (
         exc_tval  = 32'h0;
         is_interrupt = 1'b0;
 
-        // 中断采样 (优先级: MEI > MSI > MTI > SEI > SSI > STI)
-        // 仅当全局中断使能 (mstatus.MIE/SIE) 且对应使能位有效
+        // 中断采样 (优先级: MEI > MSI > MTI)
+        // 仅当全局中断使能 (mstatus.MIE) 且对应使能位有效
         if (ext_irq_i && (mip[11] & mie[11]) && mstatus[3]) begin
             is_interrupt = 1'b1;
-            exc_code = 4'd11; // Machine external interrupt
+            exc_code = exc_code_t'(4'd11); // Machine external interrupt
         end else if (soft_irq_i && (mip[3] & mie[3]) && mstatus[3]) begin
             is_interrupt = 1'b1;
-            exc_code = 4'd3;  // Machine software interrupt
+            exc_code = exc_code_t'(4'd3);  // Machine software interrupt
         end else if (timer_irq_i && (mip[7] & mie[7]) && mstatus[3]) begin
             is_interrupt = 1'b1;
-            exc_code = 4'd7;  // Machine timer interrupt
+            exc_code = exc_code_t'(4'd7);  // Machine timer interrupt
         // 异常检测 (按优先级)
         end else if (id_illegal_i) begin
             exc_valid = 1'b1;
@@ -212,8 +212,7 @@ module exception_handler (
 
     // 冲刷请求输出
     assign exc_req_o = exc_valid || is_interrupt;
-    assign exc_target_o = (is_interrupt || exc_code inside {EXC_ECALL_M, EXC_ECALL_S, EXC_ECALL_U}) ?
-                          mtvec : mtvec;  // 简化：所有异常/中断都跳 mtvec
+    assign exc_target_o = mtvec;
 
     assign exception_taken_o = exc_valid;
     assign interrupt_taken_o = is_interrupt;
