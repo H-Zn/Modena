@@ -263,13 +263,8 @@ module peregrine_top #(
         .axi_arvalid  (m_axi_arvalid),
         .axi_arready  (m_axi_arready),
         .axi_araddr   (m_axi_araddr),
-        .axi_arlen    (m_axi_arlen),
-        .axi_arsize   (m_axi_arsize),
-        .axi_arburst  (m_axi_arburst),
         .axi_rvalid   (m_axi_rvalid),
-        .axi_rready   (m_axi_rready),
-        .axi_rdata    (m_axi_rdata),
-        .axi_rlast    (m_axi_rlast)
+        .axi_rdata    (m_axi_rdata)
     );
 
     logic        itcm_sel, itcm_rsp_valid;
@@ -1010,5 +1005,21 @@ module peregrine_top #(
 
     assign led[0] = ~rst_n;
     assign led[1] = (hello_state != S_IDLE);
+
+    // AXI4 defaults (unused write channel)
+    assign m_axi_awvalid = 1'b0;
+    assign m_axi_awaddr  = 32'h0;
+    assign m_axi_awlen   = 8'h0;
+    assign m_axi_awsize  = 3'b010;
+    assign m_axi_awburst = 2'b01;
+    assign m_axi_wvalid  = 1'b0;
+    assign m_axi_wdata   = 32'h0;
+    assign m_axi_wstrb   = 4'h0;
+    assign m_axi_wlast   = 1'b1;
+    assign m_axi_bready  = 1'b1;
+    assign m_axi_arlen   = 8'h0;
+    assign m_axi_arsize  = 3'b010;
+    assign m_axi_arburst = 2'b01;
+    assign m_axi_rready  = 1'b1;
 
 endmodule
