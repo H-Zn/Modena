@@ -55,7 +55,7 @@ module perf_counters (
                 if (event_hit[i])
                     counters[i] <= counters[i] + 1'b1;
             end
-            if (cnt_wr_en_i && cnt_sel_i < 3'dNUM_COUNTERS)
+            if (cnt_wr_en_i)
                 event_mux[cnt_sel_i] <= pmu_event_t'(event_sel_i);
         end
     end
