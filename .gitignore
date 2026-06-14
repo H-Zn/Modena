@@ -1,0 +1,4 @@
+peregrine_v0.1/testbench/工具/
+*.wdb
+sim/build/
+sim/build_tmp/
