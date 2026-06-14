@@ -1,6 +1,9 @@
 # run_impl.tcl - Run Implementation
-set project_dir "G:/mypro/Modena/peregrine_v0.2/vivado_proj"
-open_project "$project_dir/peregrine_fpga.xpr"
+set script_dir [file dirname [file normalize [info script]]]
+set project_dir [file dirname $script_dir]
+set vivado_proj "$project_dir/vivado_proj"
+
+open_project "$vivado_proj/peregrine_fpga.xpr"
 
 launch_runs impl_1 -jobs [exec nproc]
 wait_on_run impl_1

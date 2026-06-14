@@ -1,8 +1,10 @@
 # program.tcl - Program FPGA via JTAG
 # Usage: vivado -mode tcl -source program.tcl
 
-set project_dir "G:/mypro/Modena/peregrine_v0.2/vivado_proj"
-set bitstream "$project_dir/peregrine_fpga.runs/impl_1/peregrine_top.bit"
+set script_dir [file dirname [file normalize [info script]]]
+set project_dir [file dirname $script_dir]
+set vivado_proj "$project_dir/vivado_proj"
+set bitstream "$vivado_proj/peregrine_fpga.runs/impl_1/peregrine_top.bit"
 
 # 打开 Hardware Manager
 open_hw_manager

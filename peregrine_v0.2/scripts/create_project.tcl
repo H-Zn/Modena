@@ -1,15 +1,16 @@
 # create_project.tcl
 # Create Vivado project for Peregrine CPU
 
-# Parameters
-set project_name "peregrine_fpga"
-set project_dir  "G:/mypro/Modena/peregrine_v0.2/vivado_proj"
-set rtl_dir      "G:/mypro/Modena/peregrine_v0.2/rtl"
-set constraints_dir "G:/mypro/Modena/peregrine_v0.2/constraints"
-set part         "xc7a35tcpg236-1"
+# 自动检测项目根目录
+set script_dir [file dirname [file normalize [info script]]]
+set project_dir [file dirname $script_dir]
+set rtl_dir "$project_dir/rtl"
+set constraints_dir "$project_dir/constraints"
+set vivado_proj "$project_dir/vivado_proj"
+set part "xc7a35tcpg236-1"
 
 # Create project
-create_project $project_name $project_dir -part $part -force
+create_project peregrine_fpga $vivado_proj -part $part -force
 
 # Set project properties
 set_property target_language Verilog [current_project]
@@ -70,4 +71,4 @@ set_property top peregrine_top [current_fileset]
 # Update compile order
 update_compile_order -fileset sources_1
 
-puts "Project created successfully at: $project_dir"
+puts "Project created successfully at: $vivado_proj"
