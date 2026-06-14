@@ -54,7 +54,7 @@ module icache (
 
     // 命中检测
     logic hit;
-    int  hit_way;
+    logic [$clog2(WAYS)-1:0] hit_way;
     always_comb begin
         hit = 1'b0;
         hit_way = 0;
